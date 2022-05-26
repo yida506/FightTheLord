@@ -38,4 +38,4 @@ class Card:
 
 if __name__ == "__main__":
     a = Card()
-    print(len(a.basecard))
+    print(a.basecard)

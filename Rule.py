@@ -94,7 +94,7 @@ class Rule:
 
     def playcard(self, clazz):
         '''
-        :param clazz:  上一次的出牌类型
+        :param clazz:
         :return:
         '''
         if self.seqtype == clazz.seqtype:
@@ -105,11 +105,12 @@ class Rule:
         raise Exception("The input don't obey the rules, please try again")
 
 
-
+    def giveup(self):
+        return False
 
 
 
 if __name__ == "__main__":
-    a = Rule("3 3 3 3")
+    a = Rule("3 3 3 3 ")
     b = Rule("4 4 5 5 6 6")
     print(a.playcard(b))
