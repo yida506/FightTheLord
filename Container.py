@@ -11,7 +11,8 @@ from Card import *
 from Rule import *
 import random
 from feapder.utils.log import log
-
+from setting import *
+import time
 
 class People:
 
@@ -20,8 +21,15 @@ class People:
 
     def __init__(self, name):
         self.name = name
+        self.ready_status = False
 
-    def set_peopletype(self, peopletype):
+    def set_ready_status(self, status: bool):
+        self.ready_status = status
+
+    def get_ready_status(self):
+        return self.ready_status
+
+    def set_peopletype(self, peopletype: str):
         if peopletype:
             self.peopletype = People.BOSS
         else:
@@ -38,16 +46,17 @@ class People:
 
 class RoomItem:
 
-    def __init__(self):
+    def __init__(self, name):
         self.roomlist = []
+        self.name = name
 
     def setuser(self, user):
         if len(self.roomlist) >= 3:
             raise Exception("the room is full, you can choose other room")
         self.roomlist.append(user)
 
-    def __str__(self):
-        return "now the people num is " + str(len(self.roomlist)) + " and now the room status is " + str(self.roomstatus)
+    # def __str__(self):
+    #     return "now the people num is " + str(len(self.roomlist)) + " and now the room status is " + str(self.roomstatus)
 
     def show_info(self):
         if self.roomstatus:
@@ -60,6 +69,9 @@ class RoomItem:
     @property
     def roomstatus(self):
         if len(self.roomlist) == 3:
+            for i in self.roomlist:
+                if i.ready_status == False:
+                    return False
             return True
         return False
 
@@ -135,10 +147,6 @@ class Container:
 
         # for i in linkitem:
         #     i.show_all()
-
-
-
-
 
 class Node:
 
@@ -219,7 +227,64 @@ class Linklist:
 
             currentnode = currentnode._next
 
+
 if __name__ == "__main__":
-    a = Container()
-    a.run()
+    # a = Container()
+    # eval("a.run()")
+
+    index = 0
+    roomitem = []
+    while index < 10:
+        input_str = input()
+        try:
+            result = input_str.split()
+            if result[0] not in commandlist:
+                raise Exception("the input don't obey the rules")
+
+            if result[0] == "createuser":
+                if len(result) != 2:
+                    raise Exception("createuser only need a param, please try again")
+                people = People(result[1])
+                log.info(f"now people's name is {people.name}, and now status is {people.ready_status}")
+
+            elif result[0] == "createroom":
+                if len(result) != 2:
+                    raise Exception("createroom only need a param, please try again")
+                nowroom = RoomItem(result[1])
+                log.info(f"now room's name is {nowroom.name}, and now status is {nowroom.roomstatus}")
+                roomitem.append(nowroom)
+
+            elif result[0] == "joinroom":
+                if people:
+                    log.info(f"now people's name is {people.name}, and now status is {people.ready_status}")
+                    roomname = result[1]
+                    findroom = False
+                    for i in roomitem:
+                        if i.name == roomname:
+                            i.roomlist.append(people)
+                            log.info(f"now people's name is {people.name}, and now status is {people.ready_status}, now room status ")
+                            findroom = True
+                    if findroom == False:
+                        raise Exception("the room isn't exist, please create room")
+                else:
+                    raise Exception("there isn't any user, please create")
+
+            elif result[0] == "ready":
+                if people:
+                    log.info(f"now people's name is {people.name}, and now status is {people.ready_status}")
+                    people.ready_status = True
+                else:
+                    raise Exception("there isn't any user, please create")
+
+            elif result[0] == "help":
+                if len(result) != 1:
+                    raise Exception("help cmd doesn't need any param")
+                for keys in commanddict.keys():
+                    log.debug(f" {keys} : {commanddict[keys]}")
+
+
+        except Exception as e:
+            log.error(e)
+
+
 

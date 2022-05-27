@@ -3,31 +3,22 @@
 """
 @author: lan
 
-@contact: 
+@contact: 服务端 用于接收
 
 @Created on: 2022/5/26
 """
 
+from feapder.utils.log import log
 import socket
-#创建一个socket对象
-client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
-host = "127.0.0.1"
-port = 9999
-#连接服务端
-client.connect((host, port))
 
+client = socket.socket() #定义协议类型,相当于生命socket类型,同时生成socket连接对象
+client.connect(('127.0.0.1',9999))
 while True:
-    send_msg = input("发送: ")
-    #设置退出条件
-    if send_msg == "q":
-        break
-    send_msg = send_msg
-    #发送数据，编码
-    client.send(send_msg.encode("utf-8"))
-    #接收服务端返回的数据
-    msg = client.recv(1024)
-    #解码
-    print("接收：%s"% msg.decode("utf-8"))
-#关闭客户端
+    msg = input("")
+    client.send(msg.encode("utf8"))
+    data = client.recv(1024)
+    log.info(f"{data.decode()}")
+
 client.close()
+
