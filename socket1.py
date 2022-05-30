@@ -7,18 +7,33 @@
 
 @Created on: 2022/5/26
 """
+
 import socketserver
 from feapder.utils.log import log
 import socket
 import threading
 import time
-from Container import *
+from Manager import *
 from setting import *
 
 
 # 用于存放当前创建的房间
-roomitem = []
-people_pool = []
+room_pool = []
+user_pool = []
+
+def get_user(user_pool, user_addr):
+    for i in user_pool:
+        if i.address == user_addr:
+            return i
+    return False
+
+def get_room(room_pool, roomname):
+    for i in room_pool:
+        if i.name == roomname:
+            return i
+    return False
+
+
 
 class ThreadedTCPRequestHandler(socketserver.BaseRequestHandler):
 
@@ -27,6 +42,7 @@ class ThreadedTCPRequestHandler(socketserver.BaseRequestHandler):
         self.port = 0           # 端口
         self.client_addr = []   # 链接客户端地址
         self.client_socket = [] # socket链接对象
+        self.manager = Manager()
         super().__init__(request, client_address, server)
 
     def setup(self,):
@@ -38,8 +54,8 @@ class ThreadedTCPRequestHandler(socketserver.BaseRequestHandler):
 
     def handle(self):
         while True:
+            time.sleep(1)
             try:
-                time.sleep(1)
                 data = self.request.recv(1024).decode('utf8')
                 result = data.split()
                 if result:    # 判断是否接收到数据
@@ -47,56 +63,89 @@ class ThreadedTCPRequestHandler(socketserver.BaseRequestHandler):
                         message = "the input don't obey the rules"
                         raise Exception("the input don't obey the rules")
 
-                    if result[0] == "createuser":
-                        if len(result) != 2:
-                            message = "createuser only need a param, please try again"
-                            raise Exception("createuser only need a param, please try again")
-                        people = People(result[1])
-                        message = f"now people's name is {people.name}, and now status is {people.ready_status}"
-                        log.info(f"now people's name is {people.name}, and now status is {people.ready_status}")
+                    # 创建逻辑
+                    elif result[0] == "CREATE":
+                        if len(result) > 3:
+                            message = "error"
+                            raise Exception("error")
+                        elif len(result) == 2:
+                            param = result[1]
+                            if param == "ROOM":
+                                message = "create room"
+                            elif param == "USER":
+                                message = "create user"
+                        elif len(result) == 3:
+                            param = result[1]
+                            if param == "ROOM":
+                                message = "create room success"
+                                nowroom = RoomItem(result[2])
+                                room_pool.append(nowroom)
 
-                    elif result[0] == "createroom":
-                        if len(result) != 2:
-                            message = "createroom only need a param, please try again"
-                            raise Exception("createroom only need a param, please try again")
-                        nowroom = RoomItem(result[1])
-                        message = f"now room's name is {nowroom.name}, and now status is {nowroom.roomstatus}"
-                        log.info(f"now room's name is {nowroom.name}, and now status is {nowroom.roomstatus}")
-                        roomitem.append(nowroom)
+                            elif param == "USER":
+                                message = "create user"
+                                # 防止重名
 
-                    elif result[0] == "joinroom":
-                        if people:
-                            log.info(f"now people's name is {people.name}, and now status is {people.ready_status}")
-                            roomname = result[1]
-                            findroom = False
-                            for i in roomitem:
-                                if i.name == roomname:
-                                    i.roomlist.append(people)
-                                    message = f"now people's name is {people.name}, and now status is {people.ready_status}, now room status "
-                                    log.info(f"now people's name is {people.name}, and now status is {people.ready_status}, now room status ")
-                                    findroom = True
-                            if findroom == False:
-                                message = "the room isn't exist, please create room"
-                                raise Exception("the room isn't exist, please create room")
+
+                                nowuser = User(result[2])
+                                nowuser.set_add(self.client_addr)
+                                user_pool.append(nowuser)
+
+                    elif result[0] == "SELECT":
+                        if len(result) > 2:
+                            message = "error"
+                            raise Exception("error")
+                        elif len(result) == 2:
+                            param = result[1]
+                            if param == "ROOM":
+                                message = f"there are {len(room_pool)} rooms :"
+
+                                # for i in room_pool:
+                                #     message += f", {i.name}"
+                            elif param == "USER":
+                                for j in user_pool:
+                                    if j.address == self.client_addr:
+                                        message = f"{self.client_addr} binding user {j.name}"
+
+                    elif result[0] == "REGISTER":
+                        if len(result) == 2:
+                            for i in user_pool:
+                                if i.name == result[1]:
+                                    i.set_add(self.client_addr)
+                                    message = "binding success"
+
                         else:
-                            message = "there isn't any user, please create"
-                            raise Exception("there isn't any user, please create")
+                            message = f"{self.client_addr}, the input don't obey the rules"
+                            raise Exception("the input don't obey the rules")
 
-                    elif result[0] == "ready":
-                        if people:
-                            people.ready_status = True
-                            message = f"now people's name is {people.name}, and now status is {people.ready_status}"
-                            log.info(f"now people's name is {people.name}, and now status is {people.ready_status}")
+                    # 准备逻辑
+                    elif result[0] == "READY":
+                        if len(result) == 1:
+                            nowuser = get_user(user_pool, self.client_address)
+                            # 添加未绑定的逻辑
+                            if not nowuser:
+                                message = "the input don't obey the rules"
+                            else:
+                                nowuser.set_ready_status()
+                                message = f"now {nowuser.name} is ready"
+                            # todo 房间状态都为ready后，manager下发牌, 以及顺序队列
+
                         else:
-                            message = "there isn't any user, please create"
-                            raise Exception("there isn't any user, please create")
+                            message = "the input don't obey the rules"
+                            raise Exception("the input don't obey the rules")
 
-                    elif result[0] == "help":
-                        if len(result) != 1:
-                            message = "help cmd doesn't need any param"
-                            raise Exception("help cmd doesn't need any param")
-                        for keys in commanddict.keys():
-                            self.request.sendall((f" {keys} : {commanddict[keys]} \n ").encode("utf8"))
+                    elif result[0] == "JOIN":
+                        if len(result) == 2:
+                            nowuser = get_user(user_pool, self.client_address)
+                            nowroom = get_room(room_pool, result[1])
+                            # TODO 用户状态异常捕获
+                            nowroom.setuser(nowuser)
+                            nowroom.show_info()
+
+                    # CARD
+                    elif result[0] == "PUT":
+                        pass
+
+
                     if message:
                         self.request.sendall(message.encode("utf8"))
 
@@ -109,6 +158,8 @@ class ThreadedTCPRequestHandler(socketserver.BaseRequestHandler):
         log.error(self.ip+" : "+str(self.port)+"断开连接！")
         self.client_addr.remove(self.client_address)
         self.client_socket.remove(self.request)
+
+
 
 
 if __name__ == "__main__":

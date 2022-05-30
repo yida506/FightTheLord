@@ -18,7 +18,8 @@ while True:
     msg = input("")
     client.send(msg.encode("utf8"))
     data = client.recv(1024)
-    log.info(f"{data.decode()}")
+    result = data.decode()
+    log.info(result)
 
 client.close()
 

@@ -62,8 +62,6 @@ class SeqType:
                 if (max(sequenctlist) - min(sequenctlist)) == len(set(sequenctlist))-1:
                     return True
 
-
-
 class Rule:
     """
     判断当前类别
