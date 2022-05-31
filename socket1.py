@@ -34,6 +34,8 @@ def get_room(room_pool, roomname):
     return False
 
 
+link_time = int(time.time())
+
 
 class ThreadedTCPRequestHandler(socketserver.BaseRequestHandler):
 
@@ -55,9 +57,27 @@ class ThreadedTCPRequestHandler(socketserver.BaseRequestHandler):
     def handle(self):
         while True:
             time.sleep(1)
+            log.info(int(time.time()) - link_time)
+            for room in room_pool:
+                room.show_info()
             try:
                 data = self.request.recv(1024).decode('utf8')
                 result = data.split()
+                # 每隔5秒打印room队列状态,如果都为ready,那么manager下发
+                if (int(time.time()) - link_time) % 5 == 0:
+                    for room in room_pool:
+                        if room.roomstatus == True:
+                            bossitem, normalitem1, normalitem2 = room.manager.assignCard()
+                            # 用户列表初始化
+                            random.shuffle(room.roomlist)
+                            room.roomlist[0].set_item(bossitem)
+                            room.roomlist[0].set_Usertype(True)
+                            room.roomlist[1].set_item(normalitem1)
+                            room.roomlist[1].set_Usertype(False)
+                            room.roomlist[2].set_item(normalitem2)
+                            room.roomlist[2].set_Usertype(False)
+                            room.show_info()
+
                 if result:    # 判断是否接收到数据
                     if result[0] not in commandlist:
                         message = "the input don't obey the rules"
@@ -85,9 +105,8 @@ class ThreadedTCPRequestHandler(socketserver.BaseRequestHandler):
                                 message = "create user"
                                 # 防止重名
 
-
                                 nowuser = User(result[2])
-                                nowuser.set_add(self.client_addr)
+                                nowuser.set_add(self.client_address)
                                 user_pool.append(nowuser)
 
                     elif result[0] == "SELECT":
@@ -103,8 +122,8 @@ class ThreadedTCPRequestHandler(socketserver.BaseRequestHandler):
                                 #     message += f", {i.name}"
                             elif param == "USER":
                                 for j in user_pool:
-                                    if j.address == self.client_addr:
-                                        message = f"{self.client_addr} binding user {j.name}"
+                                    if j.address == self.client_address:
+                                        message = f"{self.client_address} binding user {j.name}"
 
                     elif result[0] == "REGISTER":
                         if len(result) == 2:
@@ -121,6 +140,7 @@ class ThreadedTCPRequestHandler(socketserver.BaseRequestHandler):
                     elif result[0] == "READY":
                         if len(result) == 1:
                             nowuser = get_user(user_pool, self.client_address)
+                            # log.debug(f"{nowuser}, {self.client_address}, {self.client_address == nowuser.address}")
                             # 添加未绑定的逻辑
                             if not nowuser:
                                 message = "the input don't obey the rules"
@@ -141,7 +161,7 @@ class ThreadedTCPRequestHandler(socketserver.BaseRequestHandler):
                             nowroom.setuser(nowuser)
                             nowroom.show_info()
 
-                    # CARD
+                    # TODO 接收状态完善 每一次接收 会向所处room发送请求,manager负责调度
                     elif result[0] == "PUT":
                         pass
 
@@ -153,6 +173,7 @@ class ThreadedTCPRequestHandler(socketserver.BaseRequestHandler):
                 log.error(e)
                 if message:
                     self.request.sendall(message.encode("utf8"))
+
 
     def finish(self):
         log.error(self.ip+" : "+str(self.port)+"断开连接！")

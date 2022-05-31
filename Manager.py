@@ -58,6 +58,7 @@ class RoomItem:
     def __init__(self, name):
         self.roomlist = []
         self.name = name
+        self.manager = Manager()
 
     def setuser(self, user):
         if len(self.roomlist) >= 3:
@@ -71,9 +72,8 @@ class RoomItem:
         if self.roomstatus:
             for i in self.roomlist:
                 log.debug("now , " + str(i.name) + " has " + str(len(i.item)) + " left ")
-                # raise Exception("The geme isn't start please wait")
         else:
-            raise Exception("The geme isn't start please wait")
+            log.debug("The geme isn't start please wait")
 
     @property
     def roomstatus(self):
@@ -82,9 +82,14 @@ class RoomItem:
                 if i.ready_status == False:
                     return False
             return True
-        return False
+        else:
+            return False
 
 class Manager:
+
+    def __init__(self):
+        self.linkitem = [] #存放
+
 
     def assignCard(self):
         '''
@@ -157,6 +162,9 @@ class Manager:
 
         # for i in linkitem:
         #     i.show_all()
+
+
+
 
 class Node:
 
