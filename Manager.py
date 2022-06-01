@@ -89,6 +89,7 @@ class Manager:
 
     def __init__(self):
         self.linkitem = [] #存放
+        self.index = 0
 
 
     def assignCard(self):

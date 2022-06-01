@@ -33,6 +33,14 @@ def get_room(room_pool, roomname):
             return i
     return False
 
+def user_room(user, room_pool):
+    for i in room_pool:
+        for j in i.roomlist:
+            if j == user:
+                return i
+    return False
+
+
 
 link_time = int(time.time())
 
@@ -57,28 +65,13 @@ class ThreadedTCPRequestHandler(socketserver.BaseRequestHandler):
     def handle(self):
         while True:
             time.sleep(1)
-            log.info(int(time.time()) - link_time)
-            for room in room_pool:
-                room.show_info()
             try:
                 data = self.request.recv(1024).decode('utf8')
                 result = data.split()
                 # 每隔5秒打印room队列状态,如果都为ready,那么manager下发
-                if (int(time.time()) - link_time) % 5 == 0:
-                    for room in room_pool:
-                        if room.roomstatus == True:
-                            bossitem, normalitem1, normalitem2 = room.manager.assignCard()
-                            # 用户列表初始化
-                            random.shuffle(room.roomlist)
-                            room.roomlist[0].set_item(bossitem)
-                            room.roomlist[0].set_Usertype(True)
-                            room.roomlist[1].set_item(normalitem1)
-                            room.roomlist[1].set_Usertype(False)
-                            room.roomlist[2].set_item(normalitem2)
-                            room.roomlist[2].set_Usertype(False)
-                            room.show_info()
 
-                if result:    # 判断是否接收到数据
+
+                if result:  # 判断是否接收到数据
                     if result[0] not in commandlist:
                         message = "the input don't obey the rules"
                         raise Exception("the input don't obey the rules")
@@ -123,7 +116,12 @@ class ThreadedTCPRequestHandler(socketserver.BaseRequestHandler):
                             elif param == "USER":
                                 for j in user_pool:
                                     if j.address == self.client_address:
-                                        message = f"{self.client_address} binding user {j.name}"
+                                        message = f"there are {len(user_pool)} rooms "
+
+                            elif param == "CARD":
+                                nowuser = get_user(user_pool, self.client_address)
+                                # todo 为获取到用户的异常捕获
+                                message = f"{nowuser.item}"
 
                     elif result[0] == "REGISTER":
                         if len(result) == 2:
@@ -140,14 +138,28 @@ class ThreadedTCPRequestHandler(socketserver.BaseRequestHandler):
                     elif result[0] == "READY":
                         if len(result) == 1:
                             nowuser = get_user(user_pool, self.client_address)
-                            # log.debug(f"{nowuser}, {self.client_address}, {self.client_address == nowuser.address}")
+                            nowroom = user_room(nowuser, room_pool)
+
+                            # todo 不在room的异常捕获
                             # 添加未绑定的逻辑
                             if not nowuser:
                                 message = "the input don't obey the rules"
                             else:
                                 nowuser.set_ready_status()
                                 message = f"now {nowuser.name} is ready"
-                            # todo 房间状态都为ready后，manager下发牌, 以及顺序队列
+                                if nowroom.roomstatus == True:
+                                    message += f", roomstatus is {nowroom.roomstatus}"
+                                    bossitem, normalitem1, normalitem2 = nowroom.manager.assignCard()
+                                    # 用户列表初始化
+                                    random.shuffle(nowroom.roomlist)
+                                    nowroom.roomlist[0].set_item(bossitem)
+                                    nowroom.roomlist[0].set_Usertype(True)
+                                    nowroom.roomlist[1].set_item(normalitem1)
+                                    nowroom.roomlist[1].set_Usertype(False)
+                                    nowroom.roomlist[2].set_item(normalitem2)
+                                    nowroom.roomlist[2].set_Usertype(False)
+                                    nowroom.show_info()
+                                    # todo 房间状态都为ready后，manager下发牌, 以及顺序队列
 
                         else:
                             message = "the input don't obey the rules"
@@ -157,12 +169,15 @@ class ThreadedTCPRequestHandler(socketserver.BaseRequestHandler):
                         if len(result) == 2:
                             nowuser = get_user(user_pool, self.client_address)
                             nowroom = get_room(room_pool, result[1])
+                            log.info(nowroom)
                             # TODO 用户状态异常捕获
                             nowroom.setuser(nowuser)
                             nowroom.show_info()
 
                     # TODO 接收状态完善 每一次接收 会向所处room发送请求,manager负责调度
                     elif result[0] == "PUT":
+
+
                         pass
 
 
@@ -174,6 +189,7 @@ class ThreadedTCPRequestHandler(socketserver.BaseRequestHandler):
                 if message:
                     self.request.sendall(message.encode("utf8"))
 
+            # del message
 
     def finish(self):
         log.error(self.ip+" : "+str(self.port)+"断开连接！")
