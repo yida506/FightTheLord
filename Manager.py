@@ -56,6 +56,7 @@ class User:
 class RoomItem:
 
     def __init__(self, name):
+        # 0: boss 1:people1 2:people2
         self.roomlist = []
         self.name = name
         self.manager = Manager()
@@ -64,9 +65,6 @@ class RoomItem:
         if len(self.roomlist) >= 3:
             raise Exception("the room is full, you can choose other room")
         self.roomlist.append(user)
-
-    # def __str__(self):
-    #     return "now the User num is " + str(len(self.roomlist)) + " and now the room status is " + str(self.roomstatus)
 
     def show_info(self):
         if self.roomstatus:
@@ -85,12 +83,25 @@ class RoomItem:
         else:
             return False
 
+    def putorder(self):
+        # 决定顺序
+        if self.manager % 3 == 0:
+            return self.roomlist[0].name
+        elif self.manager % 3 == 1:
+            return self.roomlist[1].name
+        elif self.manager % 3 == 2:
+            return self.roomlist[2].name
+
+    def update_order(self):
+        self.manager.index += 1
+
+
+
 class Manager:
 
     def __init__(self):
         self.linkitem = [] #存放
         self.index = 0
-
 
     def assignCard(self):
         '''
@@ -164,7 +175,16 @@ class Manager:
         # for i in linkitem:
         #     i.show_all()
 
+    def flush(self, nowuser):
+        # 刷新
 
+        pass
+
+    def init_linklist(self):
+        self.linklist = Linklist()
+
+    def getlastseq(self):
+        return self.linklist.last_value
 
 
 class Node:

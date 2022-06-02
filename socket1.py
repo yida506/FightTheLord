@@ -169,13 +169,23 @@ class ThreadedTCPRequestHandler(socketserver.BaseRequestHandler):
                         if len(result) == 2:
                             nowuser = get_user(user_pool, self.client_address)
                             nowroom = get_room(room_pool, result[1])
-                            log.info(nowroom)
                             # TODO 用户状态异常捕获
                             nowroom.setuser(nowuser)
                             nowroom.show_info()
 
                     # TODO 接收状态完善 每一次接收 会向所处room发送请求,manager负责调度
                     elif result[0] == "PUT":
+
+                        # todo 异常状态捕获
+                        nowuser = get_user(user_pool, self.client_address)
+                        nowroom = get_room(room_pool, result[1])
+
+                        # todo 获取当前linklist的状态,
+
+                        seq = result[1:]
+
+
+
 
 
                         pass
